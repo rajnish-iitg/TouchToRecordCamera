@@ -94,6 +94,7 @@ public class MicrophoneEncoder implements Runnable {
         }
 
         synchronized (mRecordingFence) {
+            Log.e(TAG, "init called in reset");
             init(config);
         }
     }

@@ -28,11 +28,11 @@ public class VideoEncoderConfig {
     }
 
     public int getResolutionWidth() {
-        return 640;
+        return mWidth > mHeight ? mWidth : mHeight;
     }
 
     public int getResolutionHeight() {
-        return 480;
+        return mWidth > mHeight ?  mHeight : mWidth;
     }
 
     public int getBitRate() {

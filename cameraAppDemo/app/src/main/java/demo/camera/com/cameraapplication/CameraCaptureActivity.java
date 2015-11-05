@@ -153,7 +153,7 @@ public class CameraCaptureActivity extends Activity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(R.layout.activity_camera_capture);
 
         File outputFile = new File(Environment.getExternalStoragePublicDirectory(
@@ -213,7 +213,7 @@ public class CameraCaptureActivity extends Activity
 
     private void onResumeCameraSetup() {
         updateControls();
-        openCamera(640, 480);      // updates mCameraPreviewWidth/Height
+        openCamera(mSessionConfig.getVideoResolutionWidth(), mSessionConfig.getVideoResolutionHeight());      // updates mCameraPreviewWidth/Height
 
         // Set the preview aspect ratio.
         AspectFrameLayout layout = (AspectFrameLayout) findViewById(R.id.cameraPreview_afl);
