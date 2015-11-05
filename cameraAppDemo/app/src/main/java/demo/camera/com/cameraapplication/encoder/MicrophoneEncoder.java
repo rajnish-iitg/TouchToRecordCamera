@@ -9,6 +9,8 @@ import android.os.Build;
 import android.os.Trace;
 import android.util.Log;
 
+import junit.framework.Assert;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -29,6 +31,7 @@ public class MicrophoneEncoder implements Runnable {
     private final Object mReadyFence = new Object();    // Synchronize audio thread readiness
     private boolean mThreadReady;                       // Is audio thread ready
     private boolean mThreadRunning;                     // Is audio thread running
+    private final Object mWaitForRecordingFence = new Object();
     private final Object mRecordingFence = new Object();
 
     private AudioRecord mAudioRecord;
@@ -51,6 +54,7 @@ public class MicrophoneEncoder implements Runnable {
         mRecordingRequested = false;
         startThread();
         if (VERBOSE) Log.i(TAG, "Finished init. encoder : " + mEncoderCore.mEncoder);
+        Assert.assertNotNull(mEncoderCore.getMediaCodec());
     }
 
     private void setupAudioRecord() {
@@ -68,25 +72,30 @@ public class MicrophoneEncoder implements Runnable {
 
     public void startRecording() {
         if (VERBOSE) Log.i(TAG, "startRecording");
-        synchronized (mRecordingFence) {
+        synchronized (mWaitForRecordingFence) {
             totalSamplesNum = 0;
             startPTS = 0;
             mRecordingRequested = true;
-            mRecordingFence.notify();
+            mWaitForRecordingFence.notify();
         }
     }
 
     public void stopRecording() {
         Log.i(TAG, "stopRecording");
-        synchronized (mRecordingFence) {
+        synchronized (mWaitForRecordingFence) {
             mRecordingRequested = false;
         }
     }
 
     public void reset(SessionConfig config) throws IOException {
         if (VERBOSE) Log.i(TAG, "reset");
-        if (mThreadRunning) Log.e(TAG, "reset called before stop completed");
-        init(config);
+        if (mThreadRunning) {
+            Log.e(TAG, "reset called before stop completed");
+        }
+
+        synchronized (mRecordingFence) {
+            init(config);
+        }
     }
 
     public boolean isRecording() {
@@ -122,40 +131,47 @@ public class MicrophoneEncoder implements Runnable {
             mReadyFence.notify();
         }
 
-        synchronized (mRecordingFence) {
+        synchronized (mWaitForRecordingFence) {
             while (!mRecordingRequested) {
                 try {
-                    mRecordingFence.wait();
+                    mWaitForRecordingFence.wait();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
         }
+
+        Assert.assertNotNull(mEncoderCore.getMediaCodec());
         if (VERBOSE) Log.i(TAG, "Begin Audio transmission to encoder. encoder : " + mEncoderCore.mEncoder);
 
-        while (mRecordingRequested) {
+        synchronized (mRecordingFence) {
+            while (mRecordingRequested) {
 
-            if (TRACE) Trace.beginSection("drainAudio");
-            mEncoderCore.drainEncoder(false);
-            if (TRACE) Trace.endSection();
+                if (TRACE) Trace.beginSection("drainAudio");
+                mEncoderCore.drainEncoder(false);
+                if (TRACE) Trace.endSection();
 
+                if (TRACE) Trace.beginSection("sendAudio");
+                sendAudioToEncoder(false);
+                if (TRACE) Trace.endSection();
+
+            }
+
+            mThreadReady = false;
+             /*if (VERBOSE) */ Log.i(TAG, "Exiting audio encode loop. Draining Audio Encoder");
             if (TRACE) Trace.beginSection("sendAudio");
-            sendAudioToEncoder(false);
+            sendAudioToEncoder(true);
             if (TRACE) Trace.endSection();
-
+            mAudioRecord.stop();
+            if (TRACE) Trace.beginSection("drainAudioFinal");
+            mEncoderCore.signalEndOfStream();
+            mEncoderCore.drainEncoder(true);
+            if (TRACE) Trace.endSection();
+            mEncoderCore.release();
+            mThreadRunning = false;
+            mRecordingFence.notify();
         }
-        mThreadReady = false;
-        /*if (VERBOSE) */ Log.i(TAG, "Exiting audio encode loop. Draining Audio Encoder");
-        if (TRACE) Trace.beginSection("sendAudio");
-        sendAudioToEncoder(true);
-        if (TRACE) Trace.endSection();
-        mAudioRecord.stop();
-        if (TRACE) Trace.beginSection("drainAudioFinal");
-        mEncoderCore.signalEndOfStream();
-        mEncoderCore.drainEncoder(true);
-        if (TRACE) Trace.endSection();
-        mEncoderCore.release();
-        mThreadRunning = false;
+
     }
 
     // Variables recycled between calls to sendAudioToEncoder

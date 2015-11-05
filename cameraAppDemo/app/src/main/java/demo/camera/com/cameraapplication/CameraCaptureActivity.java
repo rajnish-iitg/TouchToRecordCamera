@@ -17,6 +17,7 @@
 package demo.camera.com.cameraapplication;
 
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -146,12 +147,13 @@ public class CameraCaptureActivity extends Activity
     protected MicrophoneEncoder mMicEncoder;
 
     // this is static so it survives activity restarts
-    private static TextureMovieEncoder sVideoEncoder = new TextureMovieEncoder();
+    private TextureMovieEncoder mVideoEncoder;
     SessionConfig mSessionConfig;
-
+    private double mCurrentAspectRatio;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(R.layout.activity_camera_capture);
 
         File outputFile = new File(Environment.getExternalStoragePublicDirectory(
@@ -170,12 +172,15 @@ public class CameraCaptureActivity extends Activity
         // Define a handler that receives camera-control messages from other threads.  All calls
         // to Camera must be made on the same thread.  Note we create this before the renderer
         // thread, so we know the fully-constructed object will be visible.
-        mCameraHandler = new CameraHandler(this);
-
-        mRecordingEnabled = sVideoEncoder.isRecording();
-
-
         mSessionConfig = CameraUtils.getSessionConfig(this);
+        CameraUtils.clearSessionConfig();
+
+        mCameraHandler = new CameraHandler(this);
+        mVideoEncoder = new TextureMovieEncoder();
+        mRecordingEnabled = mVideoEncoder.isRecording();
+
+
+
         try {
             mMicEncoder = new MicrophoneEncoder(mSessionConfig);
         } catch (IOException e) {
@@ -186,7 +191,7 @@ public class CameraCaptureActivity extends Activity
         // appropriate EGL context.
         mGLView = (GLSurfaceView) findViewById(R.id.cameraPreview_surfaceView);
         mGLView.setEGLContextClientVersion(2);     // select GLES 2.0
-        mRenderer = new CameraSurfaceRenderer(mCameraHandler, sVideoEncoder, mMicEncoder, outputFile);
+        mRenderer = new CameraSurfaceRenderer(mCameraHandler, mSessionConfig, mVideoEncoder, outputFile);
         mGLView.setRenderer(mRenderer);
         mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
@@ -197,20 +202,30 @@ public class CameraCaptureActivity extends Activity
     protected void onResume() {
         Log.d(TAG, "onResume -- acquiring camera");
         super.onResume();
+        onResumeCameraSetup();
+    }
+
+
+    void resetCameraSetup() {
+//        onPauseCameraSetup();
+//        onResumeCameraSetup();
+    }
+
+    private void onResumeCameraSetup() {
         updateControls();
         openCamera(640, 480);      // updates mCameraPreviewWidth/Height
 
         // Set the preview aspect ratio.
         AspectFrameLayout layout = (AspectFrameLayout) findViewById(R.id.cameraPreview_afl);
-
         int orientation = getResources().getConfiguration().orientation;
-
         if (orientation == Configuration.ORIENTATION_PORTRAIT) {
             mCamera.setDisplayOrientation(90);
-            layout.setAspectRatio((double) mCameraPreviewHeight / mCameraPreviewWidth);
+            mCurrentAspectRatio = (double) mCameraPreviewHeight / mCameraPreviewWidth;
+            layout.setAspectRatio(mCurrentAspectRatio);
         } else if (orientation == Configuration.ORIENTATION_LANDSCAPE){
             mCamera.setDisplayOrientation(0);
-            layout.setAspectRatio((double) mCameraPreviewWidth / mCameraPreviewHeight);
+            mCurrentAspectRatio = (double) mCameraPreviewWidth / mCameraPreviewHeight;
+            layout.setAspectRatio(mCurrentAspectRatio);
         }
 
         mGLView.onResume();
@@ -223,10 +238,7 @@ public class CameraCaptureActivity extends Activity
         Log.d(TAG, "onResume complete: " + this);
     }
 
-    @Override
-    protected void onPause() {
-        Log.d(TAG, "onPause -- releasing camera");
-        super.onPause();
+    private void onPauseCameraSetup() {
         releaseCamera();
         mGLView.queueEvent(new Runnable() {
             @Override
@@ -237,6 +249,13 @@ public class CameraCaptureActivity extends Activity
         });
         mGLView.onPause();
         Log.d(TAG, "onPause complete");
+    }
+
+    @Override
+    protected void onPause() {
+        Log.d(TAG, "onPause -- releasing camera");
+        super.onPause();
+        onPauseCameraSetup();
     }
 
     @Override
@@ -334,11 +353,30 @@ public class CameraCaptureActivity extends Activity
         }
     }
 
+    private void resetConfig() {
+        mSessionConfig = CameraUtils.getSessionConfig(this);
+        CameraUtils.clearSessionConfig();
+    }
     /**
      * onClick handler for "record" button.
      */
     public void clickToggleRecording(@SuppressWarnings("unused") View unused) {
-        mRecordingEnabled = !mRecordingEnabled;
+        unused.setSelected(!unused.isSelected());
+        if (unused.isSelected()) {
+            mMicEncoder.startRecording();
+            mRecordingEnabled = true;
+        } else {
+            mRecordingEnabled = false;
+            mMicEncoder.stopRecording();
+            resetConfig();
+            try {
+                mMicEncoder.reset(mSessionConfig);
+                mRenderer.resetSessionConfig(mSessionConfig);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         mGLView.queueEvent(new Runnable() {
             @Override
             public void run() {
@@ -346,6 +384,7 @@ public class CameraCaptureActivity extends Activity
                 mRenderer.changeRecordingState(mRecordingEnabled);
             }
         });
+
         updateControls();
     }
 
@@ -384,33 +423,9 @@ public class CameraCaptureActivity extends Activity
     }
 
     private void handleSurfaceChanged(double aspectRatio) {
-//        mCamera.stopPreview();
-//        AspectFrameLayout layout = (AspectFrameLayout) findViewById(R.id.cameraPreview_afl);
-//        int orientation = getResources().getConfiguration().orientation;
-//
-//        if (orientation == Configuration.ORIENTATION_PORTRAIT) {
-//            mCamera.setDisplayOrientation(90);
-//            layout.setAspectRatio((double) mCameraPreviewHeight / mCameraPreviewWidth);
-//            mGLView.queueEvent(new Runnable() {
-//                @Override
-//                public void run() {
-//                    mRenderer.setCameraPreviewSize(mCameraPreviewWidth, mCameraPreviewHeight);
-//                }
-//            });
-//
-//        } else if (orientation == Configuration.ORIENTATION_LANDSCAPE){
-////            mCamera.setDisplayOrientation(180);
-//            layout.setAspectRatio((double) mCameraPreviewWidth / mCameraPreviewHeight);
-////            mGLView.queueEvent(new Runnable() {
-////                @Override
-////                public void run() {
-////                    mRenderer.setCameraPreviewSize(mCameraPreviewHeight, mCameraPreviewWidth);
-////                }
-////            });
-//        }
-//
-//        mCamera.startPreview();
-//        Log.d(TAG, "handleSurfaceChanged complete: " + this);
+        if (mCurrentAspectRatio != aspectRatio) {
+            resetCameraSetup();
+        }
     }
 
     @Override
@@ -498,7 +513,6 @@ class CameraSurfaceRenderer implements GLSurfaceView.Renderer {
 
     private CameraCaptureActivity.CameraHandler mCameraHandler;
     private TextureMovieEncoder mVideoEncoder;
-    private MicrophoneEncoder mMicEncoder;
     private File mOutputFile;
 
     private FullFrameRect mFullScreen;
@@ -518,7 +532,7 @@ class CameraSurfaceRenderer implements GLSurfaceView.Renderer {
 
     private int mCurrentFilter;
     private int mNewFilter;
-
+    private SessionConfig mSessionConfig;
 
     /**
      * Constructs CameraSurfaceRenderer.
@@ -528,12 +542,12 @@ class CameraSurfaceRenderer implements GLSurfaceView.Renderer {
      * @param outputFile output file for encoded video; forwarded to movieEncoder
      */
     public CameraSurfaceRenderer(CameraCaptureActivity.CameraHandler cameraHandler,
-            TextureMovieEncoder movieEncoder, MicrophoneEncoder microphoneEncoder, File outputFile) {
+                                 SessionConfig sessionConfig, TextureMovieEncoder movieEncoder,
+                                 File outputFile) {
         mCameraHandler = cameraHandler;
         mVideoEncoder = movieEncoder;
-        mMicEncoder = microphoneEncoder;
         mOutputFile = outputFile;
-
+        mSessionConfig = sessionConfig;
         mTextureId = -1;
 
         mRecordingStatus = -1;
@@ -548,6 +562,9 @@ class CameraSurfaceRenderer implements GLSurfaceView.Renderer {
         mNewFilter = CameraCaptureActivity.FILTER_NONE;
     }
 
+    public void resetSessionConfig(SessionConfig config){
+        mSessionConfig = config;
+    }
     /**
      * Notifies the renderer thread that the activity is pausing.
      * <p>
@@ -718,9 +735,9 @@ class CameraSurfaceRenderer implements GLSurfaceView.Renderer {
                 case RECORDING_OFF:
                     Log.d(TAG, "START recording");
                     // start recording
-                    mMicEncoder.startRecording();
-                    mVideoEncoder.startRecording(new TextureMovieEncoder.EncoderConfig(
-                            mOutputFile, 640, 480, 1000000, EGL14.eglGetCurrentContext()));
+                    mVideoEncoder.startRecording(new TextureMovieEncoder.EncoderConfig(mSessionConfig.getVideoWidth(),
+                            mSessionConfig.getVideoHeight(), mSessionConfig.getVideoBitrate(),
+                            EGL14.eglGetCurrentContext(), mSessionConfig.getMuxer()));
                     mRecordingStatus = RECORDING_ON;
                     break;
                 case RECORDING_RESUMED:
@@ -740,7 +757,6 @@ class CameraSurfaceRenderer implements GLSurfaceView.Renderer {
                 case RECORDING_RESUMED:
                     // stop recording
                     Log.d(TAG, "STOP recording");
-                    mMicEncoder.stopRecording();
                     mVideoEncoder.stopRecording();
                     mRecordingStatus = RECORDING_OFF;
                     break;

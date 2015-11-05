@@ -96,25 +96,25 @@ public class TextureMovieEncoder implements Runnable {
      *       with reasonable defaults for those and bit rate.
      */
     public static class EncoderConfig {
-        final File mOutputFile;
         final int mWidth;
         final int mHeight;
         final int mBitRate;
         final EGLContext mEglContext;
+        Muxer mMuxer;
 
-        public EncoderConfig(File outputFile, int width, int height, int bitRate,
-                EGLContext sharedEglContext) {
-            mOutputFile = outputFile;
+        public EncoderConfig(int width, int height, int bitRate,
+                EGLContext sharedEglContext, Muxer muxer) {
             mWidth = width;
             mHeight = height;
             mBitRate = bitRate;
             mEglContext = sharedEglContext;
+            mMuxer = muxer;
         }
 
         @Override
         public String toString() {
             return "EncoderConfig: " + mWidth + "x" + mHeight + " @" + mBitRate +
-                    " to '" + mOutputFile.toString() + "' ctxt=" + mEglContext;
+                    "' ctxt=" + mEglContext;
         }
     }
 
@@ -310,7 +310,7 @@ public class TextureMovieEncoder implements Runnable {
         Log.d(TAG, "handleStartRecording " + config);
         mFrameNum = 0;
         prepareEncoder(config.mEglContext, config.mWidth, config.mHeight, config.mBitRate,
-                config.mOutputFile, CommonConfig.getsInstance().getMuxer());
+                config.mMuxer);
     }
 
     /**
@@ -375,8 +375,7 @@ public class TextureMovieEncoder implements Runnable {
                 new Texture2dProgram(Texture2dProgram.ProgramType.TEXTURE_EXT));
     }
 
-    private void prepareEncoder(EGLContext sharedContext, int width, int height, int bitRate,
-            File outputFile, Muxer muxer) {
+    private void prepareEncoder(EGLContext sharedContext, int width, int height, int bitRate, Muxer muxer) {
         try {
             mVideoEncoder = new VideoEncoderCore(width, height, bitRate, muxer);
         } catch (IOException ioe) {

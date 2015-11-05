@@ -1,5 +1,7 @@
 package demo.camera.com.cameraapplication.encoder;
 
+import android.os.Environment;
+
 import java.io.File;
 import java.util.Map;
 
@@ -178,7 +180,7 @@ public class SessionConfig {
             setMetaDefaults();
 
             if (outputLocation.contains(".mp4")) {
-                mMuxer = CommonConfig.getsInstance().getMuxer();
+                mMuxer = AndroidMuxer.create(createRecordingPath(outputLocation), Muxer.FORMAT.MPEG4);
             } else
                 throw new RuntimeException("Unexpected muxer output. Expected a .mp4, Got: " + outputLocation);
 
