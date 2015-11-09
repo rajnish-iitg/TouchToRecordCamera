@@ -143,6 +143,7 @@
         android:layout_width="match_parent"
         android:layout_height="135dp"
         android:layout_alignParentBottom="true"
+        android:layout_marginBottom="40dp"
         android:background="@color/camera_header">
 
         <ImageView
@@ -152,6 +153,7 @@
             android:layout_alignParentLeft="true"
             android:layout_centerVertical="true"
             android:layout_margin="12dp"
+            android:visibility="gone"
             android:src="@drawable/ic_cancle_white"/>
 
         <Button

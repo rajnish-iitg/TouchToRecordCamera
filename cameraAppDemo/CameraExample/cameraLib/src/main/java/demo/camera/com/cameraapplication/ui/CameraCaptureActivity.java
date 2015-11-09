@@ -392,10 +392,10 @@ public class CameraCaptureActivity extends ImmersiveActivity
     public void handleStopRecording() {
         mRecordButton.setBackgroundResource(R.drawable.red_dot);
         mDoneButton.setVisibility(View.VISIBLE);
+        mCancleButton.setVisibility(View.VISIBLE);
         mCancleButton.setImageResource(R.drawable.ic_delete);
         mCancleButton.setColorFilter(getResources().getColor(R.color.color_white));
     }
-
 
     private void setUpProgressIndicator() {
         mDonutProgress = (DonutProgress) findViewById(R.id.donut_progress);
@@ -473,7 +473,7 @@ public class CameraCaptureActivity extends ImmersiveActivity
                     mCameraManager.resetRecordingTime();
                 }
 
-                mCancleButton.setImageResource(R.drawable.ic_cancle_white);
+                mCancleButton.setVisibility(View.INVISIBLE);
 
             }
         });
@@ -527,7 +527,7 @@ public class CameraCaptureActivity extends ImmersiveActivity
                             }
                             mCameraManager.resetRecordingTime();
                         }
-                        mCancleButton.setImageResource(R.drawable.ic_cancle_white);
+                        mCancleButton.setVisibility(View.INVISIBLE);
                         mDoneButton.setVisibility(View.GONE);
                         CameraUtils.clearSessionFolders(mDonutProgress.getContext(), true, false);
                         dialog.dismiss();
