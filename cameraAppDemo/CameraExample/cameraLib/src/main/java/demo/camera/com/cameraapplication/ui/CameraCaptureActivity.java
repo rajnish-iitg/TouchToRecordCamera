@@ -181,6 +181,9 @@ public class CameraCaptureActivity extends ImmersiveActivity
     private String mCurrentFlash;
     private String mDesiredFlash;
 
+    private int mCurrentCamera;
+    private int mDesiredCamera;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -229,6 +232,9 @@ public class CameraCaptureActivity extends ImmersiveActivity
 
         mCurrentFlash = Camera.Parameters.FLASH_MODE_OFF;
         mDesiredFlash = null;
+
+        mCurrentCamera = -1;
+        mDesiredCamera = Camera.CameraInfo.CAMERA_FACING_BACK;
 
     }
 
@@ -323,11 +329,48 @@ public class CameraCaptureActivity extends ImmersiveActivity
             flipper.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-//                    mCameraManager.requestOtherCamera();
+                    requestOtherCamera();
                 }
             });
         }
     }
+
+
+    /**
+     * Request the device camera not currently selected
+     * be made active. This will take effect immediately
+     * or as soon as the camera preview becomes active.
+     * <p/>
+     * Called from UI thread
+     */
+    public void requestOtherCamera() {
+        int otherCamera = 0;
+        if (mCurrentCamera == 0)
+            otherCamera = 1;
+        requestCamera(otherCamera);
+    }
+
+    /**
+     * Request a Camera by cameraId. This will take effect immediately
+     * or as soon as the camera preview becomes active.
+     * <p/>
+     * Called from UI thread
+     *
+     * @param camera
+     */
+    public void requestCamera(int camera) {
+        if (Camera.getNumberOfCameras() == 1) {
+            Log.w(TAG, "Ignoring requestCamera: only one device camera available.");
+            return;
+        }
+        mDesiredCamera = camera;
+        if (mCamera != null && mDesiredCamera != mCurrentCamera) {
+            // Hot swap camera
+            onPauseCameraSetup();
+            onResumeCameraSetup();
+        }
+    }
+
 
     private void setUpTouchInterceptor(View interceptorView) {
         interceptorView.setOnTouchListener(new View.OnTouchListener() {
@@ -623,7 +666,8 @@ public class CameraCaptureActivity extends ImmersiveActivity
     }
 
     private void onResumeCameraSetup() {
-        openCamera(mSessionConfig.getVideoResolutionWidth(), mSessionConfig.getVideoResolutionHeight());      // updates mCameraPreviewWidth/Height
+        openCamera(mSessionConfig.getVideoResolutionWidth(),
+                mSessionConfig.getVideoResolutionHeight(), mDesiredCamera);      // updates mCameraPreviewWidth/Height
 
         // Set the preview aspect ratio.
         AspectFrameLayout layout = (AspectFrameLayout) findViewById(R.id.cameraPreview_afl);
@@ -700,7 +744,7 @@ public class CameraCaptureActivity extends ImmersiveActivity
      * <p>
      * Sets mCameraPreviewWidth and mCameraPreviewHeight to the actual width/height of the preview.
      */
-    private void openCamera(int desiredWidth, int desiredHeight) {
+    private void openCamera(int desiredWidth, int desiredHeight, int requestedCameraType) {
         if (mCamera != null) {
             throw new RuntimeException("camera already initialized");
         }
@@ -709,15 +753,31 @@ public class CameraCaptureActivity extends ImmersiveActivity
 
         // Try to find a front-facing camera (e.g. for videoconferencing).
         int numCameras = Camera.getNumberOfCameras();
-        for (int i = 0; i < numCameras; i++) {
-            Camera.getCameraInfo(i, info);
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-                mCamera = Camera.open(i);
-                break;
+        int targetCameraType = requestedCameraType;
+        boolean triedAllCameras = false;
+        cameraLoop:
+        while (!triedAllCameras) {
+            for (int i = 0; i < numCameras; i++) {
+                Camera.getCameraInfo(i, info);
+                if (info.facing == targetCameraType) {
+                    mCamera = Camera.open(i);
+                    mCurrentCamera = targetCameraType;
+                    break cameraLoop;
+                }
             }
+            if (mCamera == null) {
+                if (targetCameraType == requestedCameraType)
+                    targetCameraType = (requestedCameraType == Camera.CameraInfo.CAMERA_FACING_BACK
+                            ? Camera.CameraInfo.CAMERA_FACING_FRONT : Camera.CameraInfo.CAMERA_FACING_BACK);
+                else
+                    triedAllCameras = true;
+            }
+
         }
+
         if (mCamera == null) {
             Log.d(TAG, "No front-facing camera found; opening default");
+            mCurrentCamera = -1;
             mCamera = Camera.open();    // opens first back-facing camera
         }
         if (mCamera == null) {
