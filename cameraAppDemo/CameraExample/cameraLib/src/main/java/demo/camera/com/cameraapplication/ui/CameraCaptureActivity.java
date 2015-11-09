@@ -134,7 +134,7 @@ import demo.camera.com.cameraapplication.utils.CameraUtils;
  * continues to generate preview frames while the Activity is paused.)  The video encoder object
  * is managed as a static property of the Activity.
  */
-public class CameraCaptureActivity extends Activity
+public class CameraCaptureActivity extends ImmersiveActivity
         implements SurfaceTexture.OnFrameAvailableListener, OnItemSelectedListener {
     private static final String TAG = CameraCaptureActivity.class.getSimpleName();
     private static final boolean VERBOSE = false;
@@ -182,6 +182,9 @@ public class CameraCaptureActivity extends Activity
         super.onCreate(savedInstanceState);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(R.layout.activity_camera_capture);
+
+        CameraUtils.clearSessionConfig();
+        CameraUtils.clearSessionFolders(this, true, true);
 
         Spinner spinner = (Spinner) findViewById(R.id.cameraFilter_spinner);
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -526,6 +529,7 @@ public class CameraCaptureActivity extends Activity
                         }
                         mCancleButton.setImageResource(R.drawable.ic_cancle_white);
                         mDoneButton.setVisibility(View.GONE);
+                        CameraUtils.clearSessionFolders(mDonutProgress.getContext(), true, false);
                         dialog.dismiss();
                     }
                 })
@@ -601,6 +605,7 @@ public class CameraCaptureActivity extends Activity
         Log.d(TAG, "onDestroy");
         super.onDestroy();
         mCameraHandler.invalidateHandler();     // paranoia
+        CameraUtils.clearSessionFolders(this, true, true);
     }
 
     // spinner selected

@@ -266,11 +266,12 @@ public class CameraUtils {
         return timeStringBuilder.toString();
     }
 
-    public static void clearSessionFolders(Context context) {
+    public static void clearSessionFolders(Context context, boolean clearSessionFolder,
+                                           boolean clearSessionFolderTemp) {
         final File sessionFolder = new File(context.getExternalFilesDir(null),
                 SessionConfig.sSessionFolder);
 
-        if (sessionFolder != null && sessionFolder.exists()) {
+        if (clearSessionFolder && sessionFolder != null && sessionFolder.exists()) {
             for (File file : sessionFolder.listFiles()) {
                 if (file.exists()) {
                     file.delete();
@@ -281,7 +282,7 @@ public class CameraUtils {
 
         final File sessionFolderTemp = new File(context.getExternalFilesDir(null),
                 SessionConfig.sSessionFolderTemp);
-        if (sessionFolderTemp != null && sessionFolderTemp.exists()) {
+        if (clearSessionFolderTemp && sessionFolderTemp != null && sessionFolderTemp.exists()) {
             for (File file : sessionFolderTemp.listFiles()) {
                 if (file.exists()) {
                     file.delete();
