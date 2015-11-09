@@ -22,7 +22,7 @@
                 android:background="@color/color_black"
                 tools:context=".CameraCaptureActivity">
 
-    <demo.camera.com.cameraapplication.ui.AspectFrameLayout
+    <demo.camera.library.ui.AspectFrameLayout
         android:id="@+id/cameraPreview_afl"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -34,7 +34,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_gravity="center"/>
-    </demo.camera.com.cameraapplication.ui.AspectFrameLayout>
+    </demo.camera.library.ui.AspectFrameLayout>
 
     <!-- these overlap with the SurfaceView; by default, it's underneath the UI layer -->
 
@@ -52,7 +52,7 @@
 
     </RelativeLayout>
 
-    <demo.camera.com.cameraapplication.ui.DonutProgress
+    <demo.camera.library.ui.DonutProgress
         android:id="@+id/donut_progress"
         android:layout_width="70dp"
         android:layout_height="70dp"
