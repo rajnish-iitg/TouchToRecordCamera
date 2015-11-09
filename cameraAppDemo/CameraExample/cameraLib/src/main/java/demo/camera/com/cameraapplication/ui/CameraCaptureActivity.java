@@ -150,11 +150,8 @@ public class CameraCaptureActivity extends ImmersiveActivity
 
     private GLSurfaceView mGLView;
     private CameraSurfaceRenderer mRenderer;
-    private Camera mCamera;
     private CameraHandler mCameraHandler;
     private boolean mRecordingEnabled;      // controls button state
-
-    private int mCameraPreviewWidth, mCameraPreviewHeight;
     protected MicrophoneEncoder mMicEncoder;
 
     // this is static so it survives activity restarts
@@ -177,12 +174,6 @@ public class CameraCaptureActivity extends ImmersiveActivity
     private static final int mCancelMsgDelay = 400; // in MS
     private static final int mProgressLoopWindow = 15000; // in MS
     private static AppCameraManager mCameraManager;
-
-    private String mCurrentFlash;
-    private String mDesiredFlash;
-
-    private int mCurrentCamera;
-    private int mDesiredCamera;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -229,13 +220,6 @@ public class CameraCaptureActivity extends ImmersiveActivity
         mCameraManager = new AppCameraManager(this,mSessionConfig);
         setUpUi();
         Log.d(TAG, "onCreate complete: " + this);
-
-        mCurrentFlash = Camera.Parameters.FLASH_MODE_OFF;
-        mDesiredFlash = null;
-
-        mCurrentCamera = -1;
-        mDesiredCamera = Camera.CameraInfo.CAMERA_FACING_BACK;
-
     }
 
     public void setUpUi() {
@@ -329,48 +313,13 @@ public class CameraCaptureActivity extends ImmersiveActivity
             flipper.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    requestOtherCamera();
+                    mCameraManager.requestOtherCamera();
+                    onPauseCameraSetup();
+                    onResumeCameraSetup();
                 }
             });
         }
     }
-
-
-    /**
-     * Request the device camera not currently selected
-     * be made active. This will take effect immediately
-     * or as soon as the camera preview becomes active.
-     * <p/>
-     * Called from UI thread
-     */
-    public void requestOtherCamera() {
-        int otherCamera = 0;
-        if (mCurrentCamera == 0)
-            otherCamera = 1;
-        requestCamera(otherCamera);
-    }
-
-    /**
-     * Request a Camera by cameraId. This will take effect immediately
-     * or as soon as the camera preview becomes active.
-     * <p/>
-     * Called from UI thread
-     *
-     * @param camera
-     */
-    public void requestCamera(int camera) {
-        if (Camera.getNumberOfCameras() == 1) {
-            Log.w(TAG, "Ignoring requestCamera: only one device camera available.");
-            return;
-        }
-        mDesiredCamera = camera;
-        if (mCamera != null && mDesiredCamera != mCurrentCamera) {
-            // Hot swap camera
-            onPauseCameraSetup();
-            onResumeCameraSetup();
-        }
-    }
-
 
     private void setUpTouchInterceptor(View interceptorView) {
         interceptorView.setOnTouchListener(new View.OnTouchListener() {
@@ -486,70 +435,10 @@ public class CameraCaptureActivity extends ImmersiveActivity
                         mFlashButton.setImageResource(R.drawable.flash_off);
                     }
 
-                    toggleFlashMode();
+                    mCameraManager.toggleFlashMode();
                 }
             }
         });
-    }
-
-    public void toggleFlashMode() {
-        String otherFlashMode = "";
-        if (mCurrentFlash.equals(Camera.Parameters.FLASH_MODE_TORCH)) {
-            otherFlashMode = Camera.Parameters.FLASH_MODE_OFF;
-        } else {
-            otherFlashMode = Camera.Parameters.FLASH_MODE_TORCH;
-        }
-        requestFlash(otherFlashMode);
-    }
-
-    /**
-     * Sets the requested flash mode and restarts the
-     * camera preview. This will take effect immediately
-     * or as soon as the camera preview becomes active.
-     * <p/>
-     * <p/>
-     * Called from UI thread
-     */
-    public void requestFlash(String desiredFlash) {
-        mDesiredFlash = desiredFlash;
-        /* If mCamera for some reason is null now flash mode will be applied
-         * next time the camera opens through mDesiredFlash. */
-        if (mCamera == null) {
-            Log.w(TAG, "Ignoring requestFlash: Camera isn't available now.");
-            return;
-        }
-        Camera.Parameters params = mCamera.getParameters();
-        List<String> flashModes = params.getSupportedFlashModes();
-        /* If the device doesn't have a camera flash or
-         * doesn't support our desired flash modes return */
-
-        Log.i(TAG, "Trying to set flash to: " + mDesiredFlash + " modes available: " + flashModes);
-
-
-        if (isValidFlashMode(flashModes, mDesiredFlash) && mDesiredFlash != mCurrentFlash) {
-            mCurrentFlash = mDesiredFlash;
-            mDesiredFlash = null;
-            try {
-                params.setFlashMode(mCurrentFlash);
-                mCamera.setParameters(params);
-                Log.i(TAG, "Changed flash successfully!");
-            } catch (RuntimeException e) {
-                Log.d(TAG, "Unable to set flash" + e);
-            }
-        }
-    }
-
-    /**
-     * @param flashModes
-     * @param flashMode
-     * @return returns true if flashModes aren't null AND they contain the flashMode,
-     * else returns false
-     */
-    private boolean isValidFlashMode(List<String> flashModes, String flashMode) {
-        if (flashModes != null && flashModes.contains(flashMode)) {
-            return true;
-        }
-        return false;
     }
 
     private void setUpHeaders() {
@@ -666,19 +555,25 @@ public class CameraCaptureActivity extends ImmersiveActivity
     }
 
     private void onResumeCameraSetup() {
-        openCamera(mSessionConfig.getVideoResolutionWidth(),
-                mSessionConfig.getVideoResolutionHeight(), mDesiredCamera);      // updates mCameraPreviewWidth/Height
+        String previewFacts = mCameraManager.openCamera(mSessionConfig.getVideoResolutionWidth(),
+                mSessionConfig.getVideoResolutionHeight());      // updates mCameraPreviewWidth/Height
+
+
+        TextView text = (TextView) findViewById(R.id.cameraParams_text);
+        text.setText(previewFacts);
 
         // Set the preview aspect ratio.
         AspectFrameLayout layout = (AspectFrameLayout) findViewById(R.id.cameraPreview_afl);
         int orientation = getResources().getConfiguration().orientation;
         if (orientation == Configuration.ORIENTATION_PORTRAIT) {
-            mCamera.setDisplayOrientation(90);
-            mCurrentAspectRatio = (double) mCameraPreviewHeight / mCameraPreviewWidth;
+            mCameraManager.getCamera().setDisplayOrientation(90);
+            mCurrentAspectRatio = (double) mCameraManager.getCameraPreviewHeight() /
+                    mCameraManager.getCameraPreviewWidth() ;
             layout.setAspectRatio(mCurrentAspectRatio);
         } else if (orientation == Configuration.ORIENTATION_LANDSCAPE){
-            mCamera.setDisplayOrientation(0);
-            mCurrentAspectRatio = (double) mCameraPreviewWidth / mCameraPreviewHeight;
+            mCameraManager.getCamera().setDisplayOrientation(0);
+            mCurrentAspectRatio = (double) mCameraManager.getCameraPreviewWidth() /
+                    mCameraManager.getCameraPreviewHeight();
             layout.setAspectRatio(mCurrentAspectRatio);
         }
 
@@ -686,14 +581,15 @@ public class CameraCaptureActivity extends ImmersiveActivity
         mGLView.queueEvent(new Runnable() {
             @Override
             public void run() {
-                mRenderer.setCameraPreviewSize(mCameraPreviewWidth, mCameraPreviewHeight);
+                mRenderer.setCameraPreviewSize(mCameraManager.getCameraPreviewWidth(),
+                        mCameraManager.getCameraPreviewHeight());
             }
         });
         Log.d(TAG, "onResume complete: " + this);
     }
 
     private void onPauseCameraSetup() {
-        releaseCamera();
+        mCameraManager.releaseCamera();
         mGLView.queueEvent(new Runnable() {
             @Override
             public void run() {
@@ -739,91 +635,6 @@ public class CameraCaptureActivity extends ImmersiveActivity
     @Override
     public void onNothingSelected(AdapterView<?> parent) {}
 
-    /**
-     * Opens a camera, and attempts to establish preview mode at the specified width and height.
-     * <p>
-     * Sets mCameraPreviewWidth and mCameraPreviewHeight to the actual width/height of the preview.
-     */
-    private void openCamera(int desiredWidth, int desiredHeight, int requestedCameraType) {
-        if (mCamera != null) {
-            throw new RuntimeException("camera already initialized");
-        }
-
-        Camera.CameraInfo info = new Camera.CameraInfo();
-
-        // Try to find a front-facing camera (e.g. for videoconferencing).
-        int numCameras = Camera.getNumberOfCameras();
-        int targetCameraType = requestedCameraType;
-        boolean triedAllCameras = false;
-        cameraLoop:
-        while (!triedAllCameras) {
-            for (int i = 0; i < numCameras; i++) {
-                Camera.getCameraInfo(i, info);
-                if (info.facing == targetCameraType) {
-                    mCamera = Camera.open(i);
-                    mCurrentCamera = targetCameraType;
-                    break cameraLoop;
-                }
-            }
-            if (mCamera == null) {
-                if (targetCameraType == requestedCameraType)
-                    targetCameraType = (requestedCameraType == Camera.CameraInfo.CAMERA_FACING_BACK
-                            ? Camera.CameraInfo.CAMERA_FACING_FRONT : Camera.CameraInfo.CAMERA_FACING_BACK);
-                else
-                    triedAllCameras = true;
-            }
-
-        }
-
-        if (mCamera == null) {
-            Log.d(TAG, "No front-facing camera found; opening default");
-            mCurrentCamera = -1;
-            mCamera = Camera.open();    // opens first back-facing camera
-        }
-        if (mCamera == null) {
-            throw new RuntimeException("Unable to open camera");
-        }
-
-        Camera.Parameters parms = mCamera.getParameters();
-
-        CameraUtils.choosePreviewSize(parms, desiredWidth, desiredHeight);
-
-        // Give the camera a hint that we're recording video.  This can have a big
-        // impact on frame rate.
-        parms.setRecordingHint(true);
-//
-        // leave the frame rate set to default
-        mCamera.setParameters(parms);
-
-        int[] fpsRange = new int[2];
-        Camera.Size mCameraPreviewSize = parms.getPreviewSize();
-        parms.getPreviewFpsRange(fpsRange);
-        String previewFacts = mCameraPreviewSize.width + "x" + mCameraPreviewSize.height;
-        if (fpsRange[0] == fpsRange[1]) {
-            previewFacts += " @" + (fpsRange[0] / 1000.0) + "fps";
-        } else {
-            previewFacts += " @[" + (fpsRange[0] / 1000.0) +
-                    " - " + (fpsRange[1] / 1000.0) + "] fps";
-        }
-        TextView text = (TextView) findViewById(R.id.cameraParams_text);
-        text.setText(previewFacts);
-
-        mCameraPreviewWidth = mCameraPreviewSize.width;
-        mCameraPreviewHeight = mCameraPreviewSize.height;
-    }
-
-    /**
-     * Stops camera preview, and releases the camera to the system.
-     */
-    private void releaseCamera() {
-        if (mCamera != null) {
-            mCamera.stopPreview();
-            mCamera.release();
-            mCamera = null;
-            Log.d(TAG, "releaseCamera -- done");
-        }
-    }
-
     private void resetConfig() {
         mSessionConfig = CameraUtils.getSessionConfig(this);
         CameraUtils.clearSessionConfig();
@@ -834,26 +645,17 @@ public class CameraCaptureActivity extends ImmersiveActivity
         }
     }
 
-//    /**
-//     * onClick handler for "rebind" checkbox.
-//     */
-//    public void clickRebindCheckbox(View unused) {
-//        CheckBox cb = (CheckBox) findViewById(R.id.rebindHack_checkbox);
-//        TextureRender.sWorkAroundContextProblem = cb.isChecked();
-//    }
-
-
     /**
      * Connects the SurfaceTexture to the Camera preview output, and starts the preview.
      */
     private void handleSetSurfaceTexture(SurfaceTexture st) {
         st.setOnFrameAvailableListener(this);
         try {
-            mCamera.setPreviewTexture(st);
+            mCameraManager.getCamera().setPreviewTexture(st);
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
         }
-        mCamera.startPreview();
+        mCameraManager.getCamera().startPreview();
     }
 
     private void handleSurfaceChanged(double aspectRatio) {
