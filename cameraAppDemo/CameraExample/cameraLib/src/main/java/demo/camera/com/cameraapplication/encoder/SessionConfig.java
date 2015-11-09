@@ -12,21 +12,19 @@ import static demo.camera.com.cameraapplication.utils.CameraUtils.isKitKat;
  * Includes meta data, video + audio encoding
  * and muxing parameters
  */
+
 public class SessionConfig {
     public static final String TAG = SessionConfig.class.getSimpleName();
     private final VideoEncoderConfig mVideoConfig;
     private final AudioEncoderConfig mAudioConfig;
     private File mOutputDirectory;
     private Muxer mMuxer;
-    private boolean mConvertVerticalVideo;
-    private boolean mIsAdaptiveBitrate;
     private boolean mAttachLocation;
-    private int mHlsSegmentDuration;
 
     public static final int FRAME_RATE = 30;               // 30fps
     public static final float BPP = 0.10f;
-    public static int sDefaultWidth = 480;
-    public static int sDefaultHeight = 640;
+    public static int sDefaultWidth = 720;
+    public static int sDefaultHeight = 1280;
 
     public static String sSessionFolderTemp = "session_temp";
     public static String sSessionFolder = "session";
@@ -95,36 +93,12 @@ public class SessionConfig {
         return mAudioConfig.getSampleRate();
     }
 
-    public boolean isAdaptiveBitrate() {
-        return mIsAdaptiveBitrate;
-    }
-
-    public boolean isConvertingVerticalVideo() {
-        return mConvertVerticalVideo;
-    }
-
-    public int getHlsSegmentDuration() {
-        return mHlsSegmentDuration;
-    }
-
-    public void setUseAdaptiveBitrate(boolean useAdaptiveBit) {
-        mIsAdaptiveBitrate = useAdaptiveBit;
-    }
-
-    public void setConvertVerticalVideo(boolean convertVerticalVideo) {
-        mConvertVerticalVideo = convertVerticalVideo;
-    }
-
     public boolean shouldAttachLocation() {
         return mAttachLocation;
     }
 
     public void setAttachLocation(boolean mAttachLocation) {
         this.mAttachLocation = mAttachLocation;
-    }
-
-    public void setHlsSegmentDuration(int hlsSegmentDuration) {
-        mHlsSegmentDuration = hlsSegmentDuration;
     }
 
     public static class Builder {
@@ -143,11 +117,6 @@ public class SessionConfig {
         private String mDescription;
         private boolean mPrivate;
         private boolean mAttachLocation;
-        private boolean mConvertVerticalVideo;
-        private boolean mAdaptiveStreaming;
-        private Map mExtraInfo;
-
-        private int mHlsSegmentDuration;
 
         /**
          * Configure a SessionConfig quickly with intelligent path interpretation.
@@ -211,9 +180,6 @@ public class SessionConfig {
         private void setMetaDefaults() {
             mPrivate = false;
             mAttachLocation = true;
-            mAdaptiveStreaming = isKitKat();
-            mConvertVerticalVideo = false;
-            mHlsSegmentDuration = 10;
         }
 
         public Builder withMuxer(Muxer muxer) {
@@ -240,22 +206,6 @@ public class SessionConfig {
             mAttachLocation = attachLocation;
             return this;
         }
-
-        public Builder withAdaptiveStreaming(boolean adaptiveStreaming) {
-            mAdaptiveStreaming = adaptiveStreaming;
-            return this;
-        }
-
-        public Builder withVerticalVideoCorrection(boolean convertVerticalVideo) {
-            mConvertVerticalVideo = convertVerticalVideo;
-            return this;
-        }
-
-        public Builder withExtraInfo(Map extraInfo) {
-            mExtraInfo = extraInfo;
-            return this;
-        }
-
 
         public Builder withVideoResolution(int width, int height) {
             mWidth = width;
@@ -284,20 +234,14 @@ public class SessionConfig {
             return this;
         }
 
-        public Builder withHlsSegmentDuration(int segmentDuration) {
-            mHlsSegmentDuration = segmentDuration;
-            return this;
-        }
+
 
         public SessionConfig build() {
             SessionConfig session = new SessionConfig(mMuxer,
                     new VideoEncoderConfig(mWidth, mHeight, mVideoBitrate),
                     new AudioEncoderConfig(mNumAudioChannels, mAudioSamplerate, mAudioBitrate));
 
-            session.setUseAdaptiveBitrate(mAdaptiveStreaming);
-            session.setConvertVerticalVideo(mConvertVerticalVideo);
             session.setAttachLocation(mAttachLocation);
-            session.setHlsSegmentDuration(mHlsSegmentDuration);
             session.setOutputDirectory(mOutputDirectory);
 
             return session;

@@ -101,14 +101,16 @@ public class CameraUtils {
 
         for (Camera.Size size : parms.getSupportedPreviewSizes()) {
             if (size.width == width && size.height == height) {
+                Log.w(TAG, "setting preview size to " + width + "x" + height);
                 parms.setPreviewSize(width, height);
                 return;
             }
         }
 
-        Log.w(TAG, "Unable to set preview size to " + width + "x" + height);
+        Log.w(TAG, "Unable to set desired preview size to " + width + "x" + height);
         if (ppsfv != null) {
             parms.setPreviewSize(ppsfv.width, ppsfv.height);
+            Log.w(TAG, "setting preview size to " + ppsfv.width + "x" + ppsfv.height);
         }
         // else use whatever the default size is
     }
