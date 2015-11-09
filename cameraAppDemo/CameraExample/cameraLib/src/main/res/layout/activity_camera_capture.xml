@@ -35,13 +35,7 @@
             android:layout_height="match_parent"
             android:layout_gravity="center"/>
     </demo.camera.com.cameraapplication.ui.AspectFrameLayout>
-
-    <Spinner
-        android:id="@+id/cameraFilter_spinner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"/>
-
+    
     <!-- these overlap with the SurfaceView; by default, it's underneath the UI layer -->
 
     <TextView

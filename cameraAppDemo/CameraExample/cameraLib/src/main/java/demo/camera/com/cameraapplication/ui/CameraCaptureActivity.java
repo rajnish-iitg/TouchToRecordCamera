@@ -184,7 +184,7 @@ public class CameraCaptureActivity extends ImmersiveActivity
         CameraUtils.clearSessionConfig();
         CameraUtils.clearSessionFolders(this, true, true);
 
-        Spinner spinner = (Spinner) findViewById(R.id.cameraFilter_spinner);
+        Spinner spinner = (Spinner) findViewById(R.id.filterSpinner);
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.cameraFilterNames, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -621,6 +621,9 @@ public class CameraCaptureActivity extends ImmersiveActivity
     public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
         Spinner spinner = (Spinner) parent;
         final int filterNum = spinner.getSelectedItemPosition();
+
+        // Hide text
+        ((TextView)view).setText(null);
 
         Log.d(TAG, "onItemSelected: " + filterNum);
         mGLView.queueEvent(new Runnable() {
