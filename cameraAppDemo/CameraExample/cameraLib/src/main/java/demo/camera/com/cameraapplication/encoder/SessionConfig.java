@@ -23,8 +23,8 @@ public class SessionConfig {
 
     public static final int FRAME_RATE = 30;               // 30fps
     public static final float BPP = 0.10f;
-    public static int sDefaultWidth = 720;
-    public static int sDefaultHeight = 1280;
+    public static int sDefaultWidth = 480;
+    public static int sDefaultHeight = 640;
 
     public static String sSessionFolderTemp = "session_temp";
     public static String sSessionFolder = "session";

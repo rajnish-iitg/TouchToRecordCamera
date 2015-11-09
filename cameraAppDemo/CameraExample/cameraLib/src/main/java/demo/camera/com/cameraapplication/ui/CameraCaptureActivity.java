@@ -50,6 +50,7 @@ import android.widget.TextView;
 import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -177,6 +178,9 @@ public class CameraCaptureActivity extends ImmersiveActivity
     private static final int mProgressLoopWindow = 15000; // in MS
     private static AppCameraManager mCameraManager;
 
+    private String mCurrentFlash;
+    private String mDesiredFlash;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -222,6 +226,10 @@ public class CameraCaptureActivity extends ImmersiveActivity
         mCameraManager = new AppCameraManager(this,mSessionConfig);
         setUpUi();
         Log.d(TAG, "onCreate complete: " + this);
+
+        mCurrentFlash = Camera.Parameters.FLASH_MODE_OFF;
+        mDesiredFlash = null;
+
     }
 
     public void setUpUi() {
@@ -435,10 +443,70 @@ public class CameraCaptureActivity extends ImmersiveActivity
                         mFlashButton.setImageResource(R.drawable.flash_off);
                     }
 
-                    mCameraManager.toggleFlash();
+                    toggleFlashMode();
                 }
             }
         });
+    }
+
+    public void toggleFlashMode() {
+        String otherFlashMode = "";
+        if (mCurrentFlash.equals(Camera.Parameters.FLASH_MODE_TORCH)) {
+            otherFlashMode = Camera.Parameters.FLASH_MODE_OFF;
+        } else {
+            otherFlashMode = Camera.Parameters.FLASH_MODE_TORCH;
+        }
+        requestFlash(otherFlashMode);
+    }
+
+    /**
+     * Sets the requested flash mode and restarts the
+     * camera preview. This will take effect immediately
+     * or as soon as the camera preview becomes active.
+     * <p/>
+     * <p/>
+     * Called from UI thread
+     */
+    public void requestFlash(String desiredFlash) {
+        mDesiredFlash = desiredFlash;
+        /* If mCamera for some reason is null now flash mode will be applied
+         * next time the camera opens through mDesiredFlash. */
+        if (mCamera == null) {
+            Log.w(TAG, "Ignoring requestFlash: Camera isn't available now.");
+            return;
+        }
+        Camera.Parameters params = mCamera.getParameters();
+        List<String> flashModes = params.getSupportedFlashModes();
+        /* If the device doesn't have a camera flash or
+         * doesn't support our desired flash modes return */
+
+        Log.i(TAG, "Trying to set flash to: " + mDesiredFlash + " modes available: " + flashModes);
+
+
+        if (isValidFlashMode(flashModes, mDesiredFlash) && mDesiredFlash != mCurrentFlash) {
+            mCurrentFlash = mDesiredFlash;
+            mDesiredFlash = null;
+            try {
+                params.setFlashMode(mCurrentFlash);
+                mCamera.setParameters(params);
+                Log.i(TAG, "Changed flash successfully!");
+            } catch (RuntimeException e) {
+                Log.d(TAG, "Unable to set flash" + e);
+            }
+        }
+    }
+
+    /**
+     * @param flashModes
+     * @param flashMode
+     * @return returns true if flashModes aren't null AND they contain the flashMode,
+     * else returns false
+     */
+    private boolean isValidFlashMode(List<String> flashModes, String flashMode) {
+        if (flashModes != null && flashModes.contains(flashMode)) {
+            return true;
+        }
+        return false;
     }
 
     private void setUpHeaders() {
