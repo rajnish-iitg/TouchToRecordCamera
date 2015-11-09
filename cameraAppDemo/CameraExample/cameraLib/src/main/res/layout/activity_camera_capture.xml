@@ -36,14 +36,6 @@
             android:layout_gravity="center"/>
     </demo.camera.com.cameraapplication.ui.AspectFrameLayout>
 
-    <Button
-        android:id="@+id/toggleRecording_button"
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:onClick="clickToggleRecording"
-        android:text="@string/toggleRecordingOn"/>
-
     <Spinner
         android:id="@+id/cameraFilter_spinner"
         android:layout_width="wrap_content"
@@ -56,28 +48,15 @@
         android:id="@+id/cameraParams_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/toggleRecording_button"
         android:text="[?]"
         android:textAppearance="?android:attr/textAppearanceMedium"/>
 
-    <TextView
-        android:id="@+id/cameraOutputFileLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignLeft="@id/cameraParams_text"
-        android:layout_below="@id/cameraParams_text"
-        android:text="@string/cameraOutputFileLabel_text"/>
+    <RelativeLayout
+        android:id="@+id/touch_interceptor"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/cameraOutputFile_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignBaseline="@id/cameraOutputFileLabel"
-        android:layout_alignBottom="@id/cameraOutputFileLabel"
-        android:layout_toRightOf="@id/cameraOutputFileLabel"
-        android:paddingLeft="4dp"
-        android:text="@string/cameraOutputFile_text"/>
-
+    </RelativeLayout>
 
     <demo.camera.com.cameraapplication.ui.DonutProgress
         android:id="@+id/donut_progress"

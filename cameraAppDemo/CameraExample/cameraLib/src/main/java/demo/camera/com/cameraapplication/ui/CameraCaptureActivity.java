@@ -17,32 +17,47 @@
 package demo.camera.com.cameraapplication.ui;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.opengl.GLSurfaceView;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.view.MotionEventCompat;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.ScaleAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import demo.camera.com.cameraapplication.R;
 import demo.camera.com.cameraapplication.encoder.MicrophoneEncoder;
 import demo.camera.com.cameraapplication.encoder.SessionConfig;
 import demo.camera.com.cameraapplication.encoder.TextureMovieEncoder;
+import demo.camera.com.cameraapplication.utils.AppCameraManager;
 import demo.camera.com.cameraapplication.utils.CameraUtils;
 
 /**
@@ -146,16 +161,27 @@ public class CameraCaptureActivity extends Activity
     SessionConfig mSessionConfig;
     private double mCurrentAspectRatio;
 
+    private Button mDoneButton;
+    private ImageView mCancleButton;
+    private Button mRecordButton;
+    private ImageButton mFlashButton;
+    private DonutProgress mDonutProgress;
+    private Timer mTimer;
+    private RelativeLayout mTouchInterceptor;
+    private RelativeLayout mBlockerSpinner;
+    private ImageView mTouchIndicator;
+    private ImageView mMoreOptions;
+    private LinearLayout mExtrasContainer;
+
+    private static final int mCancelMsgDelay = 400; // in MS
+    private static final int mProgressLoopWindow = 15000; // in MS
+    private static AppCameraManager mCameraManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(R.layout.activity_camera_capture);
-
-        File outputFile = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_MOVIES), "camera-test.mp4");
-        TextView fileText = (TextView) findViewById(R.id.cameraOutputFile_text);
-        fileText.setText(outputFile.toString());
 
         Spinner spinner = (Spinner) findViewById(R.id.cameraFilter_spinner);
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -187,13 +213,330 @@ public class CameraCaptureActivity extends Activity
         // appropriate EGL context.
         mGLView = (GLSurfaceView) findViewById(R.id.cameraPreview_surfaceView);
         mGLView.setEGLContextClientVersion(2);     // select GLES 2.0
-        mRenderer = new CameraSurfaceRenderer(mCameraHandler, mSessionConfig, mVideoEncoder, outputFile);
+        mRenderer = new CameraSurfaceRenderer(mCameraHandler, mSessionConfig, mVideoEncoder);
         mGLView.setRenderer(mRenderer);
         mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
-
+        mCameraManager = new AppCameraManager(this);
+        setUpUi();
         Log.d(TAG, "onCreate complete: " + this);
     }
 
+    public void setUpUi() {
+        mBlockerSpinner = (RelativeLayout) findViewById(R.id.blocker);
+        mBlockerSpinner.setVisibility(View.GONE);
+
+        mTouchIndicator = (ImageView) findViewById(R.id.touchIndicator);
+        mTouchInterceptor = (RelativeLayout) findViewById(R.id.touch_interceptor);
+        mTouchInterceptor.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                mTouchIndicator.setImageResource(R.drawable.white_circle);
+                mTouchIndicator.setVisibility(View.VISIBLE);
+                final int X = (int) event.getRawX();
+                final int Y = (int) event.getRawY();
+
+                RelativeLayout.LayoutParams lParams = (RelativeLayout.LayoutParams)
+                        mTouchIndicator.getLayoutParams();
+                lParams.leftMargin = X - mTouchIndicator.getWidth() / 2;
+                lParams.topMargin = Y - mTouchIndicator.getHeight() / 2 ;
+                mTouchIndicator.setLayoutParams(lParams);
+                mTouchIndicator.invalidate();
+
+                ScaleAnimation scaleUpAnimation = new ScaleAnimation(
+                        0, 1, 0, 1, Animation.RELATIVE_TO_SELF, (float)0.5,
+                        Animation.RELATIVE_TO_SELF, (float)0.5);
+
+                scaleUpAnimation.setDuration(350);
+                scaleUpAnimation.setAnimationListener(new Animation.AnimationListener() {
+                    @Override
+                    public void onAnimationStart(Animation animation) {
+
+                    }
+
+                    @Override
+                    public void onAnimationEnd(Animation animation) {
+                        mTouchIndicator.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                mTouchIndicator.setVisibility(View.GONE);
+                            }
+                        }, 100);
+
+                    }
+
+                    @Override
+                    public void onAnimationRepeat(Animation animation) {
+
+                    }
+                });
+                mTouchIndicator.startAnimation(scaleUpAnimation);
+                return false;
+            }
+        });
+
+//            mTouchInterceptor.setVisibility(View.GONE);
+
+        mRecordButton = (Button) findViewById(R.id.recordButton);
+
+        mExtrasContainer = (LinearLayout) findViewById(R.id.settings_container);
+        mMoreOptions = (ImageView) findViewById(R.id.icon_more);
+        mMoreOptions.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mMoreOptions.setSelected(!mMoreOptions.isSelected());
+                if (mMoreOptions.isSelected()) {
+                    mExtrasContainer.setVisibility(View.VISIBLE);
+                } else {
+                    mExtrasContainer.setVisibility(View.GONE);
+                }
+
+            }
+        });
+
+//            mRecordButton .setOnClickListener(mRecordButtonClickListener);
+        setUpTouchInterceptor(mRecordButton);
+
+        setUpHeaders();
+        setUpFlashButton();
+        setUpProgressIndicator();
+
+//        setupFilterSpinner();
+        setupCameraFlipper();
+    }
+
+    private void setupCameraFlipper() {
+        View flipper = findViewById(R.id.cameraFlipper);
+        if (Camera.getNumberOfCameras() == 1) {
+            flipper.setVisibility(View.GONE);
+        } else {
+            flipper.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+//                    mCameraManager.requestOtherCamera();
+                }
+            });
+        }
+    }
+
+    private void setUpTouchInterceptor(View interceptorView) {
+        interceptorView.setOnTouchListener(new View.OnTouchListener() {
+
+            private long lastRecordingRequestedTime = 0;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                int action = MotionEventCompat.getActionMasked(event);
+                boolean retVal = false;
+                switch (action) {
+                    case (MotionEvent.ACTION_DOWN):
+                        Log.d(TAG, "Action was DOWN");
+                        lastRecordingRequestedTime = System.currentTimeMillis();
+                        startRecording();
+                        retVal = true;
+                        break;
+                    case (MotionEvent.ACTION_UP):
+                        Log.d(TAG, "Action was UP");
+                        if (System.currentTimeMillis() - lastRecordingRequestedTime > mCancelMsgDelay) {
+                            stopRecording();
+                        }
+                        retVal = true;
+                        break;
+                    default:
+                        retVal = false;
+                }
+                return retVal;
+            }
+        });
+    }
+
+    public void startRecording() {
+        Log.d(TAG, "Action was DOWN");
+        mMicEncoder.startRecording();
+        mRecordButton.setBackgroundResource(R.drawable.red_dot_stop);
+        mRecordingEnabled = true;
+        mCameraManager.changeRecordingState(mRecordingEnabled);
+        mGLView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                // notify the renderer that we want to change the encoder's state
+                mRenderer.changeRecordingState(mRecordingEnabled);
+            }
+        });
+        mRecordButton.setBackgroundResource(R.drawable.red_dot_stop);
+    }
+
+    public void stopRecording() {
+        mRecordingEnabled = false;
+        mMicEncoder.stopRecording();
+        handleStopRecording();
+        resetConfig();
+        try {
+            mMicEncoder.reset(mSessionConfig);
+            mRenderer.resetSessionConfig(mSessionConfig);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        mCameraManager.changeRecordingState(mRecordingEnabled);
+        mGLView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                // notify the renderer that we want to change the encoder's state
+                mRenderer.changeRecordingState(mRecordingEnabled);
+            }
+        });
+    }
+    public void handleStopRecording() {
+        mRecordButton.setBackgroundResource(R.drawable.red_dot);
+        mDoneButton.setVisibility(View.VISIBLE);
+        mCancleButton.setImageResource(R.drawable.ic_delete);
+        mCancleButton.setColorFilter(getResources().getColor(R.color.color_white));
+    }
+
+
+    private void setUpProgressIndicator() {
+        mDonutProgress = (DonutProgress) findViewById(R.id.donut_progress);
+        mDonutProgress.setText(CameraUtils.millisecondToTimeString(0));
+        mTimer = new Timer();
+        mTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mCameraManager != null && mCameraManager.isRecording()) {
+                            mDonutProgress.setVisibility(View.VISIBLE);
+                            mDonutProgress.setText(CameraUtils.millisecondToTimeString(
+                                    mCameraManager.getRecordingTime()));
+                            float timeInMlSec = mCameraManager.getRecordingTime();
+                            float progress = ((timeInMlSec % mProgressLoopWindow) * 1.0f /
+                                    mProgressLoopWindow) * 100;
+                            mDonutProgress.setProgress(progress);
+                        }
+                    }
+                });
+            }
+        }, 100, 200);
+    }
+
+    private void setUpFlashButton() {
+        mFlashButton = (ImageButton) findViewById(R.id.flashButton);
+        mFlashButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mCameraManager != null) {
+                    v.setSelected(!v.isSelected());
+                    if (v.isSelected()) {
+                        mFlashButton.setImageResource(R.drawable.flash_on);
+                    } else {
+                        mFlashButton.setImageResource(R.drawable.flash_off);
+                    }
+
+                    mCameraManager.toggleFlash();
+                }
+            }
+        });
+    }
+
+    private void setUpHeaders() {
+        mCancleButton = (ImageView) findViewById(R.id.cancle_button);
+        mCancleButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mDoneButton.getVisibility() == View.VISIBLE) {
+                    showCancleAlert();
+                } else {
+                    finish();
+                }
+            }
+        });
+
+        mDoneButton = (Button) findViewById(R.id.doneButton);
+        mDoneButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AsyncStitcherTask stitcherTask = new AsyncStitcherTask(CameraCaptureActivity.this);
+                stitcherTask.execute("AsyncStitcherTask Task");
+                mDoneButton.setVisibility(View.GONE);
+
+                if (mCameraManager != null && mCameraManager.isRecording()) {
+                    handleStopRecording();
+                }
+
+                mBlockerSpinner.setVisibility(View.VISIBLE);
+                mDonutProgress.setProgress(0);
+                mDonutProgress.setText(CameraUtils.millisecondToTimeString(0));
+                if (mCameraManager != null) {
+                    mCameraManager.resetRecordingTime();
+                }
+
+                mCancleButton.setImageResource(R.drawable.ic_cancle_white);
+
+            }
+        });
+    }
+
+
+    private class AsyncStitcherTask extends AsyncTask<String, Integer, Boolean> {
+
+        WeakReference<CameraCaptureActivity> weakActivity;
+        Context mContext;
+
+        AsyncStitcherTask(CameraCaptureActivity activity) {
+            weakActivity = new WeakReference<>(activity);
+            mContext = activity.getApplicationContext();
+
+        }
+        @Override
+        protected Boolean doInBackground(String... params) {
+            final File inputDir = new File(mContext.getExternalFilesDir(null),
+                    SessionConfig.sSessionFolder);
+            final File outDir = Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DCIM);
+
+            CameraUtils.stichVideos(
+                    mContext, inputDir.getPath(), outDir.getPath());
+            return true;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean aBoolean) {
+            super.onPostExecute(aBoolean);
+            CameraCaptureActivity activity = weakActivity.get();
+            if (activity != null) {
+                mBlockerSpinner.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private void showCancleAlert() {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete video ...")
+                .setMessage("Are you sure you want to delete video ?")
+                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // continue with delete
+                        mDonutProgress.setProgress(0);
+                        mDonutProgress.setText(CameraUtils.millisecondToTimeString(0));
+                        if (mCameraManager != null) {
+                            if (mCameraManager.isRecording()) {
+                                mCameraManager.stopRecording();
+                            }
+                            mCameraManager.resetRecordingTime();
+                        }
+                        mCancleButton.setImageResource(R.drawable.ic_cancle_white);
+                        mDoneButton.setVisibility(View.GONE);
+                        dialog.dismiss();
+                    }
+                })
+                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+    }
     @Override
     protected void onResume() {
         Log.d(TAG, "onResume -- acquiring camera");
@@ -208,7 +551,6 @@ public class CameraCaptureActivity extends Activity
     }
 
     private void onResumeCameraSetup() {
-        updateControls();
         openCamera(mSessionConfig.getVideoResolutionWidth(), mSessionConfig.getVideoResolutionHeight());      // updates mCameraPreviewWidth/Height
 
         // Set the preview aspect ratio.
@@ -353,36 +695,6 @@ public class CameraCaptureActivity extends Activity
         mSessionConfig = CameraUtils.getSessionConfig(this);
         CameraUtils.clearSessionConfig();
     }
-    /**
-     * onClick handler for "record" button.
-     */
-    public void clickToggleRecording(@SuppressWarnings("unused") View unused) {
-        unused.setSelected(!unused.isSelected());
-        if (unused.isSelected()) {
-            mMicEncoder.startRecording();
-            mRecordingEnabled = true;
-        } else {
-            mRecordingEnabled = false;
-            mMicEncoder.stopRecording();
-            resetConfig();
-            try {
-                mMicEncoder.reset(mSessionConfig);
-                mRenderer.resetSessionConfig(mSessionConfig);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        mGLView.queueEvent(new Runnable() {
-            @Override
-            public void run() {
-                // notify the renderer that we want to change the encoder's state
-                mRenderer.changeRecordingState(mRecordingEnabled);
-            }
-        });
-
-        updateControls();
-    }
 
 //    /**
 //     * onClick handler for "rebind" checkbox.
@@ -392,18 +704,6 @@ public class CameraCaptureActivity extends Activity
 //        TextureRender.sWorkAroundContextProblem = cb.isChecked();
 //    }
 
-    /**
-     * Updates the on-screen controls to reflect the current state of the app.
-     */
-    private void updateControls() {
-        Button toggleRelease = (Button) findViewById(R.id.toggleRecording_button);
-        int id = mRecordingEnabled ?
-                R.string.toggleRecordingOff : R.string.toggleRecordingOn;
-        toggleRelease.setText(id);
-
-        //CheckBox cb = (CheckBox) findViewById(R.id.rebindHack_checkbox);
-        //cb.setChecked(TextureRender.sWorkAroundContextProblem);
-    }
 
     /**
      * Connects the SurfaceTexture to the Camera preview output, and starts the preview.

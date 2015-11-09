@@ -33,7 +33,6 @@ class CameraSurfaceRenderer implements GLSurfaceView.Renderer {
 
     private CameraCaptureActivity.CameraHandler mCameraHandler;
     private TextureMovieEncoder mVideoEncoder;
-    private File mOutputFile;
 
     private FullFrameRect mFullScreen;
 
@@ -59,14 +58,11 @@ class CameraSurfaceRenderer implements GLSurfaceView.Renderer {
      * <p>
      * @param cameraHandler Handler for communicating with UI thread
      * @param movieEncoder video encoder object
-     * @param outputFile output file for encoded video; forwarded to movieEncoder
      */
     public CameraSurfaceRenderer(CameraCaptureActivity.CameraHandler cameraHandler,
-                                 SessionConfig sessionConfig, TextureMovieEncoder movieEncoder,
-                                 File outputFile) {
+                                 SessionConfig sessionConfig, TextureMovieEncoder movieEncoder) {
         mCameraHandler = cameraHandler;
         mVideoEncoder = movieEncoder;
-        mOutputFile = outputFile;
         mSessionConfig = sessionConfig;
         mTextureId = -1;
 
