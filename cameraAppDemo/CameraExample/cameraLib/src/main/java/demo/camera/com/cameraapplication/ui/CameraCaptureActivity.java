@@ -19,6 +19,7 @@ package demo.camera.com.cameraapplication.ui;
 import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.SurfaceTexture;
@@ -614,6 +615,17 @@ public class CameraCaptureActivity extends ImmersiveActivity
         super.onDestroy();
         mCameraHandler.invalidateHandler();     // paranoia
         CameraUtils.clearSessionFolders(this, true, true);
+    }
+
+    @Override
+    public void finish() {
+        setResult();
+        super.finish();
+
+    }
+
+    void setResult() {
+        setResult(Activity.RESULT_OK, new Intent());
     }
 
     // spinner selected
