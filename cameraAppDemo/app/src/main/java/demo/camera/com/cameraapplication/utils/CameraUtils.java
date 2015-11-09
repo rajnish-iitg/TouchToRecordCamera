@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package demo.camera.com.cameraapplication;
+package demo.camera.com.cameraapplication.utils;
 
 import android.content.Context;
 import android.hardware.Camera;

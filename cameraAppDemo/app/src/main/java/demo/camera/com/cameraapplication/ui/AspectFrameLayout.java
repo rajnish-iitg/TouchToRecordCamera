@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package demo.camera.com.cameraapplication;
+package demo.camera.com.cameraapplication.ui;
 
 import android.content.Context;
 import android.util.AttributeSet;

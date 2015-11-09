@@ -20,7 +20,7 @@
     android:layout_height="match_parent"
     tools:context=".CameraCaptureActivity" >
 
-    <demo.camera.com.cameraapplication.AspectFrameLayout
+    <demo.camera.com.cameraapplication.ui.AspectFrameLayout
         android:id="@+id/cameraPreview_afl"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -32,7 +32,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_gravity="center" />
-    </demo.camera.com.cameraapplication.AspectFrameLayout>
+    </demo.camera.com.cameraapplication.ui.AspectFrameLayout>
 
     <Button
         android:id="@+id/toggleRecording_button"

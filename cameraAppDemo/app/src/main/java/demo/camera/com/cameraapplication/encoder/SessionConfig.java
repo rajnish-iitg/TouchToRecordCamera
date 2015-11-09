@@ -1,13 +1,11 @@
 package demo.camera.com.cameraapplication.encoder;
 
-import android.os.Environment;
-
 import java.io.File;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static demo.camera.com.cameraapplication.CameraUtils.isKitKat;
+import static demo.camera.com.cameraapplication.utils.CameraUtils.isKitKat;
 
 /**
  * Configuration information for a Broadcasting or Recording session.

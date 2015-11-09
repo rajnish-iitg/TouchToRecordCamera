@@ -9,7 +9,7 @@ import android.util.Log;
 
 import java.nio.ByteBuffer;
 
-import static demo.camera.com.cameraapplication.CameraUtils.isKitKat;
+import static demo.camera.com.cameraapplication.utils.CameraUtils.isKitKat;
 
 
 /**
