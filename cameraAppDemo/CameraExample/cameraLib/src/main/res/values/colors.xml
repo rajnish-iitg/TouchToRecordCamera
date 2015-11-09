@@ -3,4 +3,18 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+
+    <color name="kickflip_green">#47a447</color>
+    <color name="kickflip_green_shadow">#ff397b39</color>
+    <color name="kickflip_white">#ffffffff</color>
+
+    <color name="kickflip_green_shade_2">#2B642B</color>
+    <color name="kickflip_green_shade_3">#4DB14D</color>
+    <color name="kickflip_green_shade_4">#68F068</color>
+
+    <color name="camera_header">#5525272a</color>
+
+    <color name="color_black">#ff25272a</color>
+    <color name="color_white">#ffffffff</color>
+
 </resources>

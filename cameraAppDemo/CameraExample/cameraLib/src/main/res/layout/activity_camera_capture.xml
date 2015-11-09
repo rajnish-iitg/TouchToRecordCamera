@@ -15,23 +15,25 @@
 -->
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".CameraCaptureActivity" >
+                xmlns:custom="http://schemas.android.com/apk/res-auto"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/color_black"
+                tools:context=".CameraCaptureActivity">
 
     <demo.camera.com.cameraapplication.ui.AspectFrameLayout
         android:id="@+id/cameraPreview_afl"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_alignParentTop="true"
-        android:layout_centerInParent="true" >
+        android:layout_centerInParent="true">
 
         <android.opengl.GLSurfaceView
             android:id="@+id/cameraPreview_surfaceView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="center" />
+            android:layout_gravity="center"/>
     </demo.camera.com.cameraapplication.ui.AspectFrameLayout>
 
     <Button
@@ -39,14 +41,14 @@
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/toggleRecordingOn"
-        android:onClick="clickToggleRecording" />
+        android:onClick="clickToggleRecording"
+        android:text="@string/toggleRecordingOn"/>
 
     <Spinner
         android:id="@+id/cameraFilter_spinner"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentRight="true" />
+        android:layout_alignParentRight="true"/>
 
     <!-- these overlap with the SurfaceView; by default, it's underneath the UI layer -->
 
@@ -56,7 +58,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/toggleRecording_button"
         android:text="[?]"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
+        android:textAppearance="?android:attr/textAppearanceMedium"/>
 
     <TextView
         android:id="@+id/cameraOutputFileLabel"
@@ -64,7 +66,7 @@
         android:layout_height="wrap_content"
         android:layout_alignLeft="@id/cameraParams_text"
         android:layout_below="@id/cameraParams_text"
-        android:text="@string/cameraOutputFileLabel_text" />
+        android:text="@string/cameraOutputFileLabel_text"/>
 
     <TextView
         android:id="@+id/cameraOutputFile_text"
@@ -74,6 +76,146 @@
         android:layout_alignBottom="@id/cameraOutputFileLabel"
         android:layout_toRightOf="@id/cameraOutputFileLabel"
         android:paddingLeft="4dp"
-        android:text="@string/cameraOutputFile_text" />
+        android:text="@string/cameraOutputFile_text"/>
+
+
+    <demo.camera.com.cameraapplication.ui.DonutProgress
+        android:id="@+id/donut_progress"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"
+        android:layout_margin="10dp"
+        android:visibility="gone"
+        custom:donut_finished_stroke_width="4dp"
+        custom:donut_max="100"
+        custom:donut_progress="0"
+        custom:donut_unfinished_stroke_width="2dp"/>
+
+    <LinearLayout
+        android:id="@+id/settings_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/extras_container"
+        android:layout_alignParentRight="true"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/icon_settings"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_margin="10dp"
+            android:src="@drawable/ic_settings"/>
+
+        <Spinner
+            android:id="@+id/filterSpinner"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_margin="10dp"
+            android:background="@drawable/ic_wand"
+            android:prompt="@string/effects_chooser_title"
+            android:spinnerMode="dialog"
+            android:tag="filter"/>
+
+
+        <ImageButton
+            android:id="@+id/flashButton"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_margin="10dp"
+            android:background="@android:color/transparent"
+            android:scaleType="centerInside"
+            android:src="@drawable/flash_off"/>
+
+    </LinearLayout>
+
+    <RelativeLayout
+        android:id="@+id/extras_container"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:layout_above="@+id/header_bar">
+
+        <ImageButton
+            android:id="@+id/cameraFlipper"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentLeft="true"
+            android:layout_marginLeft="5dp"
+            android:background="@android:color/transparent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/camreverse_bg"
+            android:tag="camera"/>
+
+        <ImageView
+            android:id="@+id/icon_more"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_margin="5dp"
+            android:src="@drawable/ic_more_horiz"/>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/header_bar"
+        android:layout_width="match_parent"
+        android:layout_height="135dp"
+        android:layout_alignParentBottom="true"
+        android:background="@color/camera_header">
+
+        <ImageView
+            android:id="@+id/cancle_button"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:layout_margin="12dp"
+            android:src="@drawable/ic_cancle_white"/>
+
+        <Button
+            android:id="@+id/recordButton"
+            android:layout_width="95dp"
+            android:layout_height="95dp"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_margin="16dp"
+            android:background="@drawable/red_dot"
+            android:gravity="center"/>
+
+        <Button
+            android:id="@+id/doneButton"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_margin="12dp"
+            android:background="@drawable/ic_done_tick"
+            android:visibility="gone"/>
+
+    </RelativeLayout>
+
+
+    <RelativeLayout
+        android:id="@+id/blocker"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"/>
+
+    </RelativeLayout>
+
+    <!--used for focus indicator-->
+    <ImageView
+        android:id="@+id/touchIndicator"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:visibility="gone"
+        />
 
 </RelativeLayout>
