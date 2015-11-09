@@ -9,6 +9,7 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/CameraExample/app" />
             <option value="$PROJECT_DIR$/cameraLib" />
           </set>
         </option>
