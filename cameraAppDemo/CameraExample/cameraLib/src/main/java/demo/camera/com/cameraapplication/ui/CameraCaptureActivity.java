@@ -216,7 +216,7 @@ public class CameraCaptureActivity extends Activity
         mRenderer = new CameraSurfaceRenderer(mCameraHandler, mSessionConfig, mVideoEncoder);
         mGLView.setRenderer(mRenderer);
         mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
-        mCameraManager = new AppCameraManager(this);
+        mCameraManager = new AppCameraManager(this,mSessionConfig);
         setUpUi();
         Log.d(TAG, "onCreate complete: " + this);
     }
@@ -694,6 +694,11 @@ public class CameraCaptureActivity extends Activity
     private void resetConfig() {
         mSessionConfig = CameraUtils.getSessionConfig(this);
         CameraUtils.clearSessionConfig();
+        try {
+            mCameraManager.reset(mSessionConfig);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 //    /**

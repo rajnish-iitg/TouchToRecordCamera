@@ -147,7 +147,7 @@ public class CameraUtils {
     }
 
     public static void moveVideoChunk(Context context, SessionConfig config) {
-        SessionConfig oldConfig = CameraUtils.getSessionConfig(context);
+        SessionConfig oldConfig = config;
         String path = oldConfig.getOutputPath();
         File outputDirectory = new File(context.getExternalFilesDir(null), SessionConfig.sSessionFolder);
         try {
