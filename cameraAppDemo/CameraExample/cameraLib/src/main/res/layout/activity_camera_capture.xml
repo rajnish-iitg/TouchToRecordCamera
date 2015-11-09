@@ -35,7 +35,7 @@
             android:layout_height="match_parent"
             android:layout_gravity="center"/>
     </demo.camera.com.cameraapplication.ui.AspectFrameLayout>
-    
+
     <!-- these overlap with the SurfaceView; by default, it's underneath the UI layer -->
 
     <TextView

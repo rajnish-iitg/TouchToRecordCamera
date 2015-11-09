@@ -327,8 +327,6 @@ public class TextureMovieEncoder implements Runnable {
         mVideoEncoder.drainEncoder(false);
         mFullScreen.drawFrame(mTextureId, transform);
 
-        drawBox(mFrameNum++);
-
         mInputWindowSurface.setPresentationTime(timestampNanos);
         mInputWindowSurface.swapBuffers();
     }
@@ -403,18 +401,5 @@ public class TextureMovieEncoder implements Runnable {
             mEglCore.release();
             mEglCore = null;
         }
-    }
-
-    /**
-     * Draws a box, with position offset.
-     */
-    private void drawBox(int posn) {
-        final int width = mInputWindowSurface.getWidth();
-        int xpos = (posn * 4) % (width - 50);
-        GLES20.glEnable(GLES20.GL_SCISSOR_TEST);
-        GLES20.glScissor(xpos, 0, 100, 100);
-        GLES20.glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-        GLES20.glDisable(GLES20.GL_SCISSOR_TEST);
     }
 }
