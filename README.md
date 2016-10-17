@@ -4,4 +4,4 @@ Touch/Press android camera surface view to record video. Using this I have imple
 
 It will stop recording the video when user will lift the finger from camera surface view. User can pause and continue video recording after any interval of time. Once user have finished recording the video, click next to play the recorded video.
 
-The code is abstracted out as cameraLib Library, and can be directly add and used in any android application.
+The code is abstracted out as cameraLib Library, and can be directly added and used in any android application.
